@@ -30,7 +30,6 @@ class cls_boundary_conditions():
         self.node = node
         self.gdl = gdl
         self.value = np.array(value)
-#        self.bc = bc
         self.bc_type = bc_type
 
 class cls_element_1D():
@@ -309,8 +308,8 @@ class cls_problem():
             
         return spsolve(K_global, f_global)
     
-######################################################################################
-##Programa principal
+################################################################################################
+################################### PROGRAMA PRINCIPAL #########################################
 plt.close('all')
 #Parâmetros do problema
 element_type   = 'linear'  #'linear' ou 'quadratic' (o programa aceita apenas elementos de um tipo)
@@ -320,12 +319,13 @@ delta_t        = 1.5e-3    #Incremento temporal [s]
 t_final        = 0.2       #Tempo final de simulacao [s]
 gdl            = 3         #Graus de liberdade
 
-#Criando nos
+
+###################################  CRIANDO OS NOS  ###########################################
 node = []
 for k in range(0,N_final):
     node.append(cls_node(k*1/(N_final-1),k,gdl))
 
-#Criando elementos
+################################### CRIANDO ELEMENTOS ##########################################
 element = []
 if element_type == 'linear':
     for k in range(0,N_final-1):
@@ -339,7 +339,7 @@ else:
     raise Exception('Tipo de elemento invalido')
     
 
-#Aplicando condicoes de contorno
+################################### APLICANDO C.Cs ###########################################
 bc = []
 #bc.append(cls_boundary_conditions(node[0]      ,   gdl, [0,  1,0], 'flux'))
 #bc.append(cls_boundary_conditions(node[N_final-1], gdl, [0,0.1,0], 'flux'))
@@ -347,7 +347,7 @@ bc.append(cls_boundary_conditions(node[0]      ,   gdl, [0,0,0], 'value'))
 bc.append(cls_boundary_conditions(node[N_final-1], gdl, [0,0,0], 'value'))
 
 
-#Aplicando condicao inicial
+################################### APLICANDO C.I, ###########################################
 U = np.zeros(gdl*N_final)
 for k in range(0,N_final):
     if node[k].coords <= 0.5:
@@ -355,14 +355,35 @@ for k in range(0,N_final):
     else:
         U[k*gdl:(k+1)*gdl] = np.array([0.125, 0, 0.25])
 
-#Definindo o problema
+################################### PLOTANDO A C.I. ##########################################
+plt.figure(1)
+x = np.linspace(0,1,N_final)
+
+plt.subplot(2,2,1)
+plt.title('Density')
+plt.plot(x,U[0:N_final*gdl:gdl])
+
+plt.subplot(2,2,2)
+plt.title('Velocity')
+v = U[1:N_final*gdl+1:gdl]/U[0:N_final*gdl:gdl]
+plt.plot(x,v)
+
+plt.subplot(2,2,3)
+plt.title('Pressure')
+P = (gamma-1)*(U[2:N_final*gdl+2:gdl] - U[1:N_final*gdl+1:gdl]*v/2)
+plt.plot(x,P)
+
+plt.subplot(2,2,4)
+plt.title('Energy')
+E = U[2:N_final*gdl+2:gdl]
+plt.plot(x,E)
+
+################################### DEFININDO PROBLEMA #######################################
 problem = cls_problem(node,element,bc,delta_t)
 
 
-##Main loop
-
-
-densities = U[0:N_final*gdl:gdl].copy()
+################################### LOOP PRINCIPAL  ###########################################
+densities = U[0:N_final*gdl:gdl].copy() #Criando contourf plot da densidade em x,t
 
 
 t = 0
@@ -375,7 +396,7 @@ if element_type == 'linear':
         U += Delta_U
         t += delta_t
         
-        densities = np.vstack([densities,U[0:N_final*gdl:gdl]])
+        densities = np.vstack([densities,U[0:N_final*gdl:gdl]]) #Criando contourf plot da densidade em x,t
         time.append(t)
 else:
     while t<t_final:
@@ -383,11 +404,11 @@ else:
         U += Delta_U
         t += delta_t
         
-        densities = np.vstack([densities,U[0:N_final*gdl:gdl]])
+        densities = np.vstack([densities,U[0:N_final*gdl:gdl]]) #Criando contourf plot da densidade em x,t
         time.append(t)
     
     
-#Ler dados do resultado analitico
+############################# LENDO DADOS DA SOLUCAO ANALITICA ##################################
 analytic_data = open('analytic.txt','r').read()
 lines = analytic_data.split('\n')
 rho_analy   = np.array(lines[0].split(','),dtype=float)
@@ -396,12 +417,15 @@ P_analy     = np.array(lines[2].split(','),dtype=float)
 rhoE_analy  = np.array(lines[3].split(','),dtype=float)
 x_analy     = np.linspace(0,1,len(rho_analy))
 
-#Plot em t=t_final
-plt.figure(2,[10,10])
+############################# PLOTANDO RESULTADOS DO FEM EM T=T_FINAL ###########################
 
-fem_style = 'k'
-x_axis = (0,1)
-analytic_plot = 'off'
+#Alguns dados de controle do plot
+fem_style = 'k+'        #estilo da linha do resultado pelo fem
+x_axis = (0,1)          #limites do eixo x (plot original usa intervalo pouco maior que 0 e 1)
+analytic_plot = 'on'    #'on' 'off' (mostrar a solucao analitica)
+figure_size = [10,10]   #tamanho da figura (polegadas)
+
+plt.figure(2,figure_size)
 
 x = np.linspace(0,1,N_final)
 plt.subplot(2,2,1)
@@ -436,8 +460,9 @@ plt.plot(x,E,fem_style)
 plt.xlim(x_axis)
 if analytic_plot == 'on': plt.plot(x_analy,rhoE_analy,'k')
 
+plt.savefig('fem_sod_shock_tube.eps', format='eps', dpi=1000)
 
-#Contour plot da densidade
+############################# DENSIDADE EM X,T ###########################
 X,T = np.meshgrid(x,np.array(time))
 
 plt.figure(3)
@@ -446,3 +471,5 @@ plt.ylabel('Tempo [s]')
 plt.xlabel('x')
 plt.title(r'$\rho$ ' 'vs t')
 plt.colorbar()
+
+plt.savefig('rho_xt,eps', format='eps', dpi=1000)
