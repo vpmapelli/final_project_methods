@@ -152,6 +152,9 @@ class cls_problem():
             data_C = np.append(data_C, C_elem.data)
             data_K = np.append(data_K, K_elem.data)
             
+            #A cada elemento, deslocamos gdl*(N_elem-1) linhas e colunas na matriz global
+            #Se o elemento for linear, gdl*(N_elem-1) = 3
+            #Se o elemento for linear, gdl*(N_elem-1) = 6
             N_elem = len(item.nodes)
             positioner += gdl*(N_elem-1)
             
