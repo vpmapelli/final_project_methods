@@ -55,45 +55,62 @@ class cls_element_1D():
     def element_matrices(self):
         
         n_gdl = self.nodes[0].gdl
-            
-        if (len(self.nodes)==2):
-            #Matriz do sistema que multiplica (U^(n+1) - U(n))
+        
+        #caso de elementos lineares    
+        if (len(self.nodes)==2): 
+            ####################### MATRIZ M ###############################################
+            #Matriz do sistema que multiplica (U^(n+1) - U(n)) (Mass matrix)
+            #M = h/6*[[2I,1I],[1I,2I]] (em que I é a identidade 3x3)            
             #Matriz simetrica = necessario salvar apenas os valores da parte superior
-            K_lhs = sparse.diags([2*np.ones(2*n_gdl),1*np.ones(n_gdl)],[0,n_gdl],(2*n_gdl,2*n_gdl),"coo")
-            K_lhs = (self.length/6)*K_lhs
+            M = sparse.coo_matrix(np.array([[2,1],[0,2]])) #M[1,0] = 0 pois iremos guardar apenas os valores da parte triangular superior
+            M = sparse.kron(M,sparse.eye(n_gdl),"coo") #Produto kron, nesse caso, multiplica a matriz identidade de dimensao gdl x gdl pelo valor de cada uma das posicoes do primeiro argumento M 
+            M = (self.length/6)*M
             
+
+            ####################### MATRIZ C ###############################################
             #Referente ao primeiro termo do lado direito da equacao variacional do livro de Donea
-            diag = np.ones(n_gdl)
-            K_convective = sparse.diags([np.append(-diag,diag),-diag,diag],[0,n_gdl,-n_gdl],(2*n_gdl,2*n_gdl),"coo")
-            K_convective = 0.5*K_convective
+            #C = 1/2*[[-1I,-1I],[2I,2I]] (em que I é a identidade 3x3)
+            C = sparse.coo_matrix(np.array([[-1,-1],[1,1]]))
+            C = sparse.kron(C,sparse.eye(n_gdl),"coo") #Produto kron, nesse caso, multiplica a matriz identidade de dimensao gdl x gdl pelo valor de cada uma das posicoes do primeiro argumento M 
+            C = 0.5*C
             
+            
+            ####################### MATRIZ K ###############################################
             #Referente ao segundo termo do lado direito da equacao variacional do livro de Donea
-            #Matriz simetrica = salvo apenas os valores da parte triangular superior
-            diag = np.ones(2*n_gdl)
-            K_diffusive = sparse.spdiags([diag,-diag],[0,n_gdl],2*n_gdl,2*n_gdl,"coo")
-            K_diffusive = K_diffusive/(self.length)
-                
+            #Matriz simetrica = necessario salvar apenas os valores da parte superior
+            #K = (1/h)*[[1I,-1I],[1I,-1I]] (em que I é a identidade 3x3)   
+            K = sparse.coo_matrix(np.array([[1,-1],[0,1]])) #M[1,0] = 0 pois iremos guardar apenas os valores da parte triangular superior
+            K = sparse.kron(K,sparse.eye(n_gdl),"coo") #Produto kron, nesse caso, multiplica a matriz identidade de dimensao gdl x gdl pelo valor de cada uma das posicoes do primeiro argumento M 
+            K = K/(self.length)        
+            
+        #caso de elementos quadraticos
         elif (len(self.nodes)==3):
-            #Matriz do sistema que multiplica (U^(n+1) - U(n))
+            ####################### MATRIZ M ###############################################
+            #Matriz do sistema que multiplica (U^(n+1) - U(n)) (Mass matrix)
+            #M = L/30*[[4I,2I,-1I],[2I,16I,2I],[-1I,2I,4I]] (em que I é a identidade 3x3)            
             #Matriz simetrica = necessario salvar apenas os valores da parte superior
-            K_lhs = sparse.diags([np.concatenate([4*np.ones(n_gdl),16*np.ones(n_gdl),4*np.ones(n_gdl)]),2*np.ones(2*n_gdl),-1*np.ones(n_gdl)],[0,n_gdl,2*n_gdl],(3*n_gdl,3*n_gdl),"coo")
-            K_lhs = (self.length/30)*K_lhs
+            M = sparse.coo_matrix(np.array([[4,2,-1],[0,16,2],[0,0,4]])) #Valores da parte triangular inferior zerados, pois matriz simetrica
+            M = sparse.kron(M,sparse.eye(n_gdl),"coo") #Produto kron, nesse caso, multiplica a matriz identidade de dimensao gdl x gdl pelo valor de cada uma das posicoes do primeiro argumento M 
+            M = (self.length/30)*M
             
-            
+
+            ####################### MATRIZ C ###############################################
             #Referente ao primeiro termo do lado direito da equacao variacional do livro de Donea
-            diag1 = -4*np.ones(2*n_gdl)
-            diag2 = np.ones(n_gdl)
-            K_convective = sparse.diags([np.concatenate([-3*np.ones(n_gdl),np.zeros(n_gdl),3*np.ones(n_gdl)]),diag1,diag2,-diag1,-diag2],[0,n_gdl,2*n_gdl,-n_gdl,-2*n_gdl],(3*n_gdl,3*n_gdl),"coo")
-            K_convective = K_convective/6.0
+            #C = 1/6*[[-3I,-4I,1I],[4I,0,4I],[-1I,4I,3I]] (em que I é a identidade 3x3)
+            C = sparse.coo_matrix(np.array([[-3,-4,1],[4,0,4],[-1,4,3]]))
+            C = sparse.kron(C,sparse.eye(n_gdl),"coo") #Produto kron, nesse caso, multiplica a matriz identidade de dimensao gdl x gdl pelo valor de cada uma das posicoes do primeiro argumento M 
+            C = (1/6)*C
             
+            
+            ####################### MATRIZ K ###############################################
             #Referente ao segundo termo do lado direito da equacao variacional do livro de Donea
-            #Matriz simetrica = salvo apenas os valores da parte triangular superior
-            K_diffusive = sparse.diags([np.concatenate([7*np.ones(n_gdl),16*np.ones(n_gdl),7*np.ones(n_gdl)]),-8*np.ones(2*n_gdl),1*np.ones(n_gdl)],[0,n_gdl,2*n_gdl],(3*n_gdl,3*n_gdl),"coo")
-            K_diffusive = K_diffusive/(3*self.length)
+            #Matriz simetrica = necessario salvar apenas os valores da parte superior
+            #K = (1/(3L))*[[7I,-8I,1I],[-8I,16I,-8I],[1I,-8I,7I]] (em que I é a identidade 3x3)   
+            K = sparse.coo_matrix(np.array([[7,-8,1],[0,16,-8],[0,0,7]])) #Valores da parte triangular inferior zerados, pois matriz simetrica
+            K = sparse.kron(K,sparse.eye(n_gdl),"coo") #Produto kron, nesse caso, multiplica a matriz identidade de dimensao gdl x gdl pelo valor de cada uma das posicoes do primeiro argumento M 
+            K = K/(3*self.length)        
         
-        
-        #LEMBRAR QUE K_lhs,K_diffusive ESTA SALVA PELA METADE (MATRIZ SIMETRICA!)!!!!!!!!!!
-        return K_lhs,K_convective,K_diffusive
+        return M,C,K
     
 class cls_problem():
     def __init__(self, node, elements, bc, time_increment):
@@ -104,46 +121,143 @@ class cls_problem():
         self.gdl        = gdl
         self.bc         = bc
         self.dt         = time_increment
+        
+    
+    #Montando as matrizes globais    
+    def compute_global_matrices(self):
+        '''O codigo assume que todos os elementos sao do mesmo tipo. Portanto, para verificar se temos elementos lineares ou quadraticos
+        basta verificar quantos nodes temos em algum dos elementos'''
+        if (len(self.elements[0].nodes) == 2):
+            self.M,self.C,self.K = self.linear_global_matrices()
+        elif (len(self.elements[0].nodes) == 3):
+            self.M,self.C,self.K = self.quadratic_global_matrices()
+        
 
-    def problem_solve_linear(self,U):
+    def linear_global_matrices(self):
+        gdl = self.gdl
+        
         '''Sabendo que foi utilizada um espacamento homogeneo e nao ha dependencia temporal das matrizes
         dessa forma, podemos calcular as matrizes de um elemento apenas uma vez'''
-        gamma = self.elements[0].material.gamma
-        
-        Ke_lhs,Ke_convective,Ke_diffusive = self.elements[0].element_matrices()
-        gdl = self.gdl
-        dt = self.dt
+        M_elem,C_elem,K_elem = self.elements[0].element_matrices()
         
         rows = []
         cols = []
         rows_c = []
         cols_c = []
-        data_lhs = []
-        data_convective = []
-        data_diffusive = []
+        data_M = []
+        data_C = []
+        data_K = []
         
+#        rows_A = []
+#        cols_A = []
+#        data_A = []
+        
+        for k in range(0,len(self.elements)):
+            #Matrizes M_elem e K_elem sao simetricas e possuem valores nas mesmas posicoes
+            #Para cada iteracao, deslocamos as matrizes do elemento em gdl colunas e linhas na matriz global
+            rows = np.append(rows, M_elem.row + k*gdl)
+            cols = np.append(cols, M_elem.col  + k*gdl)
+            
+            #Matriz C_elem nao e simetrica (mais valores foram salvos)
+            rows_c = np.append(rows_c, C_elem.row + k*gdl)
+            cols_c = np.append(cols_c, C_elem.col + k*gdl)
+            
+            '''Se existirem valores na mesma posicao, como no caso nas posicoes que mais de um elemento possuem valor nao nulo,
+            eles serao automaticamente somados na construcao da matriz esparsa'''
+            data_M = np.append(data_M, M_elem.data)
+            data_C = np.append(data_C, C_elem.data)
+            data_K = np.append(data_K, K_elem.data)
+            
+#            #Construindo a matriz A de forma a ser aplicada no vetor U
+#            rows_A = np.append(rows_A, np.array([0,1,1,1,2,2,2]) + k*gdl)
+#            cols_A = np.append(cols_A, np.array([1,0,1,2,0,1,2]) + k*gdl)
+            
+
+            
+#            v = U[k*gdl+1]/U[k*gdl]
+#            E = U[k*gdl+2]/U[k*gdl]
+#            data_A = np.append(data_A, np.array([1,
+#                                                 -0.5*(3-gamma)*(v**2.0),
+#                                                 (3-gamma)*(v),
+#                                                 gamma-1,
+#                                                 (gamma-1)*(v)**3.0-gamma*E*v,
+#                                                 gamma*E-1.5*(gamma-1)*(v**2.0),
+#                                                 gamma*v]))
+#            
+#
+#        
+#        '''A matriz A é aplicada sobre os nós. O último (for loop) corre os elementos,
+#        e foi utlizado para evitar utilizar um segundo (for loop) correndo os nos. No entando,
+#        como Nelementos = Nnodes -1, a aplicacao de A no ulitmo node deve ser feita após o loop'''
+#        N = self.Nnodes
+#        rows_A = np.append(rows_A, np.array([0,1,1,1,2,2,2]) + (N-1)*gdl)
+#        cols_A = np.append(cols_A, np.array([1,0,1,2,0,1,2]) + (N-1)*gdl)
+#        
+#        v = U[(N-1)*gdl+1]/U[(N-1)*gdl]
+#        E = U[(N-1)*gdl+2]/U[(N-1)*gdl]
+#        data_A = np.append(data_A, np.array([1,
+#                                             -0.5*(3-gamma)*(v**2.0),
+#                                             (3-gamma)*(v),
+#                                             gamma-1,
+#                                             (gamma-1)*(v)**3.0-gamma*E*v,
+#                                             gamma*E-1.5*(gamma-1)*(v**2.0),
+#                                             gamma*v]))
+    
+
+    
+        N  = self.Nnodes
+        K_global = sparse.csr_matrix((data_K, (rows, cols)), shape=(gdl*N,gdl*N))
+        K_global = K_global + K_global.T - sparse.diags(K_global.diagonal(), dtype='float')
+        
+        C_global = sparse.csr_matrix((data_C, (rows_c, cols_c)), shape=(gdl*N,gdl*N))
+        C_global.eliminate_zeros() #eliminar os valores iguais a zero (no caso linear, a diagonal principal assume valores iguais a 0 em muitas posicoes)
+        
+        M_global = sparse.csr_matrix((data_M, (rows, cols)), shape=(gdl*N,gdl*N))
+        M_global = M_global + M_global.T - sparse.diags(M_global.diagonal(), dtype='float')
+        
+#        A = sparse.csr_matrix((data_A, (rows_A, cols_A)), shape=(gdl*N,gdl*N))
+#        
+#        #Construindo o vetor livre
+#        F = A.dot(U)
+#        A_sq_U = A.dot(F)
+#        
+#        f_global = dt*K_c.dot(F) -0.5*dt*dt*K_d.dot(A_sq_U)
+#        
+#        #Boundary conditions
+#        w = 1e20
+#        for k in range(0,len(bc)):
+#            pos = bc[k].node.id
+#            
+##            if pos==0:
+##                f_global[pos*gdl:(pos+1)*gdl] = f_global[pos*gdl:(pos+1)*gdl] + dt*bc[k].value    
+##            elif pos==N-1:
+##                f_global[pos*gdl:(pos+1)*gdl] = f_global[pos*gdl:(pos+1)*gdl] - dt*bc[k].value    
+#        
+#            K_global[pos*gdl,pos*gdl]     =  K_global[pos*gdl,pos*gdl] + w
+#            K_global[pos*gdl+1,pos*gdl+1] =  K_global[pos*gdl+1,pos*gdl+1] + w
+#            K_global[pos*gdl+2,pos*gdl+2] =  K_global[pos*gdl+2,pos*gdl+2] + w
+#            
+#            f_global[pos*gdl] = bc[k].value[0]*w
+#            f_global[pos*gdl+1] = bc[k].value[1]*w
+#            f_global[pos*gdl+2] = bc[k].value[2]*w
+            
+        return M_global,C_global,K_global
+    
+    def solve_time_step(self,U):
+        N = self.Nnodes
+        gdl = self.gdl
+        dt = self.dt
+        
+        #Construindo a matriz A de forma a ser aplicada no vetor U
         rows_A = []
         cols_A = []
         data_A = []
-        
-        for k,item in enumerate(self.elements):
-            #Matrizes Ke_lhs e Ke_convective sao simetricas e possuem valores nas mesmas posicoes
-            rows = np.append(rows, Ke_lhs.row + k*gdl)
-            cols = np.append(cols, Ke_lhs.col  + k*gdl)
-            
-            #Matriz Ke_convective nao e anti-simetrica
-            rows_c = np.append(rows_c, Ke_convective.row + k*gdl)
-            cols_c = np.append(cols_c, Ke_convective.col + k*gdl)
-            
-            data_lhs        = np.append(data_lhs,        Ke_lhs.data)
-            data_convective = np.append(data_convective, Ke_convective.data)
-            data_diffusive  = np.append(data_diffusive,  Ke_diffusive.data)
-            
-            #Construindo a matriz A de forma a ser aplicada no vetor U
+                
+        for k in range(0,N):
             rows_A = np.append(rows_A, np.array([0,1,1,1,2,2,2]) + k*gdl)
             cols_A = np.append(cols_A, np.array([1,0,1,2,0,1,2]) + k*gdl)
             
-
+    
             
             v = U[k*gdl+1]/U[k*gdl]
             E = U[k*gdl+2]/U[k*gdl]
@@ -153,46 +267,16 @@ class cls_problem():
                                                  gamma-1,
                                                  (gamma-1)*(v)**3.0-gamma*E*v,
                                                  gamma*E-1.5*(gamma-1)*(v**2.0),
-                                                 gamma*v]))
-            
+                                                 gamma*v]))    
 
         
-        '''A matriz A é aplicada sobre os nós. O último (for loop) corre os elementos,
-        e foi utlizado para evitar utilizar um segundo (for loop) correndo os nos. No entando,
-        como Nelementos = Nnodes -1, a aplicacao de A no ulitmo node deve ser feita após o loop'''
-        N = self.Nnodes
-        rows_A = np.append(rows_A, np.array([0,1,1,1,2,2,2]) + (N-1)*gdl)
-        cols_A = np.append(cols_A, np.array([1,0,1,2,0,1,2]) + (N-1)*gdl)
-        
-        v = U[(N-1)*gdl+1]/U[(N-1)*gdl]
-        E = U[(N-1)*gdl+2]/U[(N-1)*gdl]
-        data_A = np.append(data_A, np.array([1,
-                                             -0.5*(3-gamma)*(v**2.0),
-                                             (3-gamma)*(v),
-                                             gamma-1,
-                                             (gamma-1)*(v)**3.0-gamma*E*v,
-                                             gamma*E-1.5*(gamma-1)*(v**2.0),
-                                             gamma*v]))
-    
-
-    
-    
-        K_global = sparse.csr_matrix((data_lhs, (rows, cols)), shape=(gdl*N,gdl*N))
-        K_global = K_global + K_global.T - sparse.diags(K_global.diagonal(), dtype='float')
-        
-        K_c = sparse.csr_matrix((data_convective, (rows_c, cols_c)), shape=(gdl*N,gdl*N))
-        K_c.eliminate_zeros() #eliminar os valores iguais a zero
-        
-        K_d = sparse.csr_matrix((data_diffusive, (rows, cols)), shape=(gdl*N,gdl*N))
-        K_d = K_d + K_d.T - sparse.diags(K_d.diagonal(), dtype='float')
-        
-        A = sparse.csr_matrix((data_A, (rows_A, cols_A)), shape=(gdl*N,gdl*N))
-        
+        A = sparse.csr_matrix((data_A, (rows_A, cols_A)), shape=(gdl*N,gdl*N))        
+              
         #Construindo o vetor livre
         F = A.dot(U)
         A_sq_U = A.dot(F)
         
-        f_global = dt*K_c.dot(F) -0.5*dt*dt*K_d.dot(A_sq_U)
+        f_global = dt*self.C.dot(F) -0.5*dt*dt*self.K.dot(A_sq_U)
         
         #Boundary conditions
         w = 1e20
@@ -203,17 +287,17 @@ class cls_problem():
 #                f_global[pos*gdl:(pos+1)*gdl] = f_global[pos*gdl:(pos+1)*gdl] + dt*bc[k].value    
 #            elif pos==N-1:
 #                f_global[pos*gdl:(pos+1)*gdl] = f_global[pos*gdl:(pos+1)*gdl] - dt*bc[k].value    
-        
-            K_global[pos*gdl,pos*gdl]     =  K_global[pos*gdl,pos*gdl] + w
-            K_global[pos*gdl+1,pos*gdl+1] =  K_global[pos*gdl+1,pos*gdl+1] + w
-            K_global[pos*gdl+2,pos*gdl+2] =  K_global[pos*gdl+2,pos*gdl+2] + w
+            
+            self.M[pos*gdl,pos*gdl]     =  self.M[pos*gdl,pos*gdl] + w
+            self.M[pos*gdl+1,pos*gdl+1] =  self.M[pos*gdl+1,pos*gdl+1] + w
+            self.M[pos*gdl+2,pos*gdl+2] =  self.M[pos*gdl+2,pos*gdl+2] + w
             
             f_global[pos*gdl] = bc[k].value[0]*w
             f_global[pos*gdl+1] = bc[k].value[1]*w
             f_global[pos*gdl+2] = bc[k].value[2]*w
             
-        return spsolve(K_global, f_global)
-              
+        return spsolve(self.M, f_global)
+
 
     def problem_solve_quadratic(self,U):
         '''Sabendo que foi utilizada um espacamento homogeneo e nao ha dependencia temporal das matrizes
@@ -313,7 +397,7 @@ class cls_problem():
 plt.close('all')
 #Parâmetros do problema
 element_type   = 'linear'  #'linear' ou 'quadratic' (o programa aceita apenas elementos de um tipo)
-N_final        = 101       #Numero de nodes (para utilizar elementos quadraticos, numero de nodes deve ser impar maior que 3) 
+N_final        = 101         #Numero de nodes (para utilizar elementos quadraticos, numero de nodes deve ser impar maior que 3) 
 gamma          = 1.4       #Coeficiente de expansao adiabatica
 delta_t        = 1.5e-3    #Incremento temporal [s]
 t_final        = 0.2       #Tempo final de simulacao [s]
@@ -380,33 +464,24 @@ plt.plot(x,E)
 
 ################################### DEFININDO PROBLEMA #######################################
 problem = cls_problem(node,element,bc,delta_t)
+problem.compute_global_matrices() #calculo das matrices globais pode ser feito apenas uma vez antes do loop principal
 
 
 ################################### LOOP PRINCIPAL  ###########################################
 densities = U[0:N_final*gdl:gdl].copy() #Criando contourf plot da densidade em x,t
 
-
 t = 0
 time = []
 time.append(t)
 
-if element_type == 'linear':
-    while t<t_final:
-        Delta_U = problem.problem_solve_linear(U)
+while t<t_final:
+        Delta_U = problem.solve_time_step(U)
         U += Delta_U
         t += delta_t
         
         densities = np.vstack([densities,U[0:N_final*gdl:gdl]]) #Criando contourf plot da densidade em x,t
-        time.append(t)
-else:
-    while t<t_final:
-        Delta_U = problem.problem_solve_quadratic(U)
-        U += Delta_U
-        t += delta_t
-        
-        densities = np.vstack([densities,U[0:N_final*gdl:gdl]]) #Criando contourf plot da densidade em x,t
-        time.append(t)
-    
+        time.append(t)    
+
     
 ############################# LENDO DADOS DA SOLUCAO ANALITICA ##################################
 analytic_data = open('analytic.txt','r').read()
