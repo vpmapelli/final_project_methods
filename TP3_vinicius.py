@@ -376,6 +376,10 @@ if analytic_plot == 'on': plt.plot(x_analy,rhoE_analy,'k')
 
 plt.savefig('fem_sod_shock_tube.eps', format='eps', dpi=1000)
 
+#Courant number at t=0.2
+c = np.sqrt(gamma*P/U[0:N_final*gdl:gdl])
+print("Courant number:", max(np.abs(v)+c)*delta_t/(x[1]-x[0]))
+
 ############################# DENSIDADE EM X,T ###########################
 X,T = np.meshgrid(x,np.array(time))
 
